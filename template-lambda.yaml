@@ -1,0 +1,135 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'Bucket to bucket Lambda'
+
+Parameters:
+  stage:
+    Type: String
+    Default: ${opt:stage}
+  imageUri:
+    Default: ${opt:imageUri}
+    Type: String
+
+Mappings:
+  LambdaConfig:
+    test:
+      logRetentionDays: 7
+      myBucket: myBucket
+      memory: 2048
+      timeout: 30
+    stage:
+      logRetentionDays: 7
+      myBucket: myBucket
+      memory: 2048
+      timeout: 30
+    prod:
+      logRetentionDays: 30
+      myBucket: myBucket
+      memory: 2048
+      timeout: 30
+
+  Subnets:
+    test:
+      subnet1: myPrivateSubnetA
+      subnet2: myPrivateSubnetB
+      subnet3: myPrivateSubnetC
+    stage:
+      subnet1: myPrivateSubnetA
+      subnet2: myPrivateSubnetB
+      subnet3: myPrivateSubnetC
+    prod:
+      subnet1: myPrivateSubnetA
+      subnet2: myPrivateSubnetB
+      subnet3: myPrivateSubnetC
+
+  SecurityGroups:
+    test:
+      sg: sg1
+    stage:
+      sg: sg1
+    prod:
+      sg: sg1
+
+Globals:
+  Function:
+    Environment:
+      Variables:
+        ENVIRONMENT: !Sub ${stage}
+        INPUT_BUCKET: !FindInMap [LambdaConfig, !Ref stage, myBucket]
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+
+Resources:
+  BucketToBucketLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-bucketToBucket
+      RetentionInDays: !FindInMap [LambdaConfig, !Ref stage, logRetentionDays]
+
+  BucketToBucketLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-bucketToBucket
+      PackageType: Image
+      ImageUri: !Sub ${imageUri}
+      MemorySize: !FindInMap [LambdaConfig, !Ref stage, memory]
+      Timeout: !FindInMap [LambdaConfig, !Ref stage, timeout]
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - S3ReadPolicy:
+            BucketName: !FindInMap [LambdaConfig, !Ref stage, myBucket]
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./
+    DependsOn:
+      - BucketToBucketLogGroup
+
+  # Lambdas inside the VPC
+  BucketToBucketWhitelistedLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-bucketToBucketWhitelisted
+      RetentionInDays: !FindInMap [LambdaConfig, !Ref stage, logRetentionDays]
+
+  BucketToBucketWhitelistedLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-bucketToBucketWhitelisted
+      PackageType: Image
+      ImageUri: !Sub ${imageUri}
+      MemorySize: !FindInMap [LambdaConfig, !Ref stage, memory]
+      Timeout: !FindInMap [LambdaConfig, !Ref stage, timeout]
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - S3ReadPolicy:
+            BucketName: !FindInMap [LambdaConfig, !Ref stage, myBucket]
+      VpcConfig:
+        SecurityGroupIds:
+          - !FindInMap [SecurityGroups, !Ref stage, sg]
+        SubnetIds:
+          - !FindInMap [Subnets, !Ref stage, subnet1]
+          - !FindInMap [Subnets, !Ref stage, subnet2]
+          - !FindInMap [Subnets, !Ref stage, subnet3]
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./
+    DependsOn:
+      - BucketToBucketWhitelistedLogGroup
+
+Outputs:
+  BucketToBucketLambdaArn:
+    Description: BucketToBucketLambda Arn
+    Value:
+      Fn::GetAtt: 
+        - BucketToBucketLambda
+        - Arn
+    Export:
+      Name: !Sub bucketToBucketLambda-${stage}-arn
+  BucketToBucketWhitelistedLambdaArn:
+    Description: BucketToBucketWhitelistedLambda Arn
+    Value:
+      Fn::GetAtt: 
+        - BucketToBucketWhitelistedLambda
+        - Arn
+    Export:
+      Name: !Sub bucketToBucketWhitelistedLambda-${stage}-arn
+  
