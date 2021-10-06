@@ -104,11 +104,11 @@ Resources:
             BucketName: !FindInMap [LambdaConfig, !Ref stage, myBucket]
       VpcConfig:
         SecurityGroupIds:
-          - !FindInMap [SecurityGroups, !Ref stage, sg]
+          - Fn::ImportValue: !FindInMap [SecurityGroups, !Ref stage, sg]
         SubnetIds:
-          - !FindInMap [Subnets, !Ref stage, subnet1]
-          - !FindInMap [Subnets, !Ref stage, subnet2]
-          - !FindInMap [Subnets, !Ref stage, subnet3]
+          - Fn::ImportValue: !FindInMap [Subnets, !Ref stage, subnet1]
+          - Fn::ImportValue: !FindInMap [Subnets, !Ref stage, subnet2]
+          - Fn::ImportValue: !FindInMap [Subnets, !Ref stage, subnet3]
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./
