@@ -50,14 +50,13 @@ Once you have your image uploaded, it is time for the Lambda:
 
 ```javaScript
  - sam build --template-file template-lambda.yaml 
-    - sam deploy --template-file template-lambda.yaml 
+ - sam deploy --template-file template-lambda.yaml 
                  --stack-name ${YOUR_STACK_NAME_LAMBDA}
                  --s3-bucket ${YOUR_CI_BUCKET}
                  --capabilities CAPABILITY_NAMED_IAM 
                  --image-repository ${YOUR_PACKAGE_IMAGE_URI}
                  --region ${YOUR_AWS_REGION} 
-                 --parameter-overrides awsAdminRole=${YOUR_AWS_ROLE_ARN} stage=${STAGE} 
-imageUri=${YOUR_PACKAGE_IMAGE_URI}
+                 --parameter-overrides awsAdminRole=${YOUR_AWS_ROLE_ARN} stage=${STAGE} imageUri=${YOUR_PACKAGE_IMAGE_URI}
                  --force-upload
                  --no-fail-on-empty-changeset
                  --debug
